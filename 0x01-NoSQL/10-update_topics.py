@@ -19,4 +19,4 @@ def update_topics(mongo_collection, name, topics):
     Returns:
       None
     """
-    mongo_collection.updateMany({"name": name}, {"$set": {"topics": topics}})
+    mongo_collection.update_many({"name": name}, {"$set": {"topics": topics}})
