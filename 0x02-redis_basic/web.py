@@ -13,7 +13,7 @@ import requests
 redis_client = redis.Redis()
 
 
-def cache_with_expiration(method: Callable) -> Callable:
+def cache_with_expiration(method: Callable, expiration: int) -> Callable:
     """
     Decorator to cache the result of a function with an expiration time.
 
@@ -35,22 +35,24 @@ def cache_with_expiration(method: Callable) -> Callable:
         Returns:
             str: The HTML content of the URL, either from cache or fetched.
         """
-        redis_client.incr(f"count:{url}")
-        result = redis_client.get(f"result:{url}")
+        key = "cached:" + url
+        cached_value = redis_client.get(key)
+        if cached_value:
+            return cached_value.decode("utf-8")
 
-        if result:
-            return result.decode("utf-8")
+            # Get new content and update cache
+        key_count = "count:" + url
+        html_content = method(url)
 
-        result = method(url)
-        redis_client.set(f"count:{url}", 0)
-        redis_client.setex(f"result:{url}", 10, result)
-
-        return result
+        redis_client.incr(key_count)
+        redis_client.set(key, html_content, ex=expiration)
+        redis_client.expire(key, expiration)
+        return html_content
 
     return wrapper
 
 
-@cache_with_expiration
+@cache_with_expiration(10)
 def get_page(url: str) -> str:
     """
     Obtain the HTML content of a particular URL.
