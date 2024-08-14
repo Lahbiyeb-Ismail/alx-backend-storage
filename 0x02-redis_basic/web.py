@@ -13,7 +13,7 @@ import requests
 redis_client = redis.Redis()
 
 
-def cache_with_expiration(expiration: int):
+def cache_with_expiration(method: Callable, expiration: int) -> Callable:
     """
     Decorator to cache the result of a function with an expiration time.
 
@@ -24,47 +24,34 @@ def cache_with_expiration(expiration: int):
         Callable: The wrapped function with caching.
     """
 
-    def decorator(method: Callable) -> Callable:
+    @wraps(method)
+    def wrapper(url: str) -> str:
         """
-        Inner decorator function to wrap the original method.
+        Wrapper function to handle caching and expiration.
 
         Args:
-            method (Callable): The method to be decorated.
+            url (str): The URL to fetch.
 
         Returns:
-            Callable: The wrapped method with caching and expiration.
+            str: The HTML content of the URL, either from cache or fetched.
         """
+        # Track the number of times the URL is accessed
+        redis_client.incr(f"count:{url}")
 
-        @wraps(method)
-        def wrapper(url: str) -> str:
-            """
-            Wrapper function to handle caching and expiration.
+        # Check if the URL is already cached
+        cached_result = redis_client.get(url)
+        if cached_result:
+            return cached_result.decode("utf-8")
 
-            Args:
-                url (str): The URL to fetch.
+        # Call the original method to get the result
+        result = method(url)
 
-            Returns:
-                str: The HTML content of the URL, either from cache or fetched.
-            """
-            # Track the number of times the URL is accessed
-            redis_client.incr(f"count:{url}")
+        # Cache the result with an expiration time
+        redis_client.setex(url, expiration, result)
 
-            # Check if the URL is already cached
-            cached_result = redis_client.get(url)
-            if cached_result:
-                return cached_result.decode("utf-8")
+        return result
 
-            # Call the original method to get the result
-            result = method(url)
-
-            # Cache the result with an expiration time
-            redis_client.setex(url, expiration, result)
-
-            return result
-
-        return wrapper
-
-    return decorator
+    return wrapper
 
 
 @cache_with_expiration(10)
