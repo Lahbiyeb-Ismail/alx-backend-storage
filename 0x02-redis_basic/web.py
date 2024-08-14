@@ -25,16 +25,39 @@ def cache_with_expiration(expiration: int):
     """
 
     def decorator(method: Callable) -> Callable:
+        """
+        Inner decorator function to wrap the original method.
+
+        Args:
+            method (Callable): The method to be decorated.
+
+        Returns:
+            Callable: The wrapped method with caching and expiration.
+        """
+
         @wraps(method)
         def wrapper(url: str) -> str:
+            """
+            Wrapper function to handle caching and expiration.
+
+            Args:
+                url (str): The URL to fetch.
+
+            Returns:
+                str: The HTML content of the URL, either from cache or fetched.
+            """
+            # Track the number of times the URL is accessed
             redis_client.incr(f"count:{url}")
 
+            # Check if the URL is already cached
             cached_result = redis_client.get(url)
             if cached_result:
                 return cached_result.decode("utf-8")
 
+            # Call the original method to get the result
             result = method(url)
 
+            # Cache the result with an expiration time
             redis_client.setex(url, expiration, result)
 
             return result
