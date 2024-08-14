@@ -13,7 +13,7 @@ import requests
 redis_client = redis.Redis()
 
 
-def cache_with_expiration(method: Callable, expiration: int) -> Callable:
+def cache_with_expiration(method: Callable) -> Callable:
     """
     Decorator to cache the result of a function with an expiration time.
 
@@ -45,14 +45,14 @@ def cache_with_expiration(method: Callable, expiration: int) -> Callable:
         html_content = method(url)
 
         redis_client.incr(key_count)
-        redis_client.set(key, html_content, ex=expiration)
-        redis_client.expire(key, expiration)
+        redis_client.set(key, html_content, ex=10)
+        redis_client.expire(key, 10)
         return html_content
 
     return wrapper
 
 
-@cache_with_expiration(10)
+@cache_with_expiration
 def get_page(url: str) -> str:
     """
     Obtain the HTML content of a particular URL.
