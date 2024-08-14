@@ -10,7 +10,7 @@ import redis
 import requests
 
 
-def cache_with_expiration(method: Callable):
+def cache_with_expiration(method: Callable) -> Callable:
     """
     Decorator to cache the result of a function with an expiration time.
 
@@ -35,16 +35,15 @@ def cache_with_expiration(method: Callable):
         redis_client = redis.Redis()
 
         redis_client.incr(f"count:{url}")
+        cached_page = redis_client.get(f"{url}")
 
-        cached_result = redis_client.get(url)
-        if cached_result:
-            return cached_result.decode("utf-8")
+        if cached_page:
+            return cached_page.decode("utf-8")
 
-        result = method(url)
+        response = method(url)
+        redis_client.set(f"{url}", response, 10)
 
-        redis_client.setex(url, 10, result)
-
-        return result
+        return response
 
     return wrapper
 
