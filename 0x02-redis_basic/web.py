@@ -12,6 +12,10 @@ import requests
 
 redis_client = redis.Redis()
 
+"""
+The module-level Redis instance.
+"""
+
 
 def cache_with_expiration(method: Callable) -> Callable:
     """
