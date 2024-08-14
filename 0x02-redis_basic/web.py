@@ -9,8 +9,6 @@ from typing import Callable
 import redis
 import requests
 
-redis_client = redis.Redis()
-
 
 def cache_with_expiration(method: Callable):
     """
@@ -34,18 +32,16 @@ def cache_with_expiration(method: Callable):
         Returns:
         str: The HTML content of the URL, either from cache or fetched.
         """
-        # Track the number of times the URL is accessed
+        redis_client = redis.Redis()
+
         redis_client.incr(f"count:{url}")
 
-        # Check if the URL is already cached
         cached_result = redis_client.get(url)
         if cached_result:
             return cached_result.decode("utf-8")
 
-        # Call the original method to get the result
         result = method(url)
 
-        # Cache the result with an expiration time
         redis_client.setex(url, 10, result)
 
         return result
@@ -66,10 +62,3 @@ def get_page(url: str) -> str:
     """
     response = requests.get(url)
     return response.text
-
-
-# Example usage
-if __name__ == "__main__":
-    url = "http://slowwly.robertomurray.co.uk"
-    print(get_page(url))
-    print(get_page(url))
